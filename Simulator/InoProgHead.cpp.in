@@ -1,10 +1,5 @@
 #include "InoProg.h"
 #include "SimulatorConfig.h"
-#include "InoBuiltins.h"
-
-// Define the arduino functions in which everything runs
-// These must be defined by the .ino file
-void setup();
-void loop();
+#include "Arduino.h"
 
 // BEGIN .ino file content

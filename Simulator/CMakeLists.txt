@@ -11,6 +11,8 @@ configure_file (
   "${PROJECT_BINARY_DIR}/SimulatorConfig.h"
   )
 
+set (CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-Wall -Werror")
+
 # add the binary tree to the search path for include files
 # so that we will find SimulatorConfig.h
 include_directories("${PROJECT_BINARY_DIR}")
@@ -39,7 +41,6 @@ add_custom_command (OUTPUT "${PROJECT_BINARY_DIR}/InoProg.cpp"
 # add_custom_target (InoSrcFile SOURCES ${INO_PROG_FILE})
 add_executable(Simulator
    Simulator.cpp
-   InoBuiltins.cpp
    InoProg.cpp
    )
 target_link_libraries (Simulator  ${EXTRA_LIBS})

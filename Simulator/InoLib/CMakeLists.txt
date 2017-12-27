@@ -1,4 +1,4 @@
-add_library(InoLib Servo.cpp)
+add_library(InoLib Arduino.cpp Servo.cpp)
 
 install (TARGETS InoLib DESTINATION bin)
-install (FILES Servo.h DESTINATION include)
+install (FILES Arduino.h Servo.h DESTINATION include)
