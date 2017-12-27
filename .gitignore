@@ -1,0 +1,15 @@
+# Vim files
+*.swp
+*.swo
+
+# CMake generated files
+# CMakeFiles/
+# *CMakeCache.txt
+# cmake_install.cmake
+build/
+install/
+# Makefile
+
+# Build files
+*.exe
+

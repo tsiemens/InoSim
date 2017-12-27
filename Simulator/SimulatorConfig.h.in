@@ -1,0 +1,12 @@
+// the configured options and settings for Simulator
+#ifndef SIMULATOR_CONFIG_H
+#define SIMULATOR_CONFIG_H
+
+#define Simulator_VERSION_MAJOR @Simulator_VERSION_MAJOR@
+#define Simulator_VERSION_MINOR @Simulator_VERSION_MINOR@
+
+#cmakedefine WIN_COMPILE
+
+#define INO_PROG_FILE @INO_PROG_FILE@
+
+#endif // SIMULATOR_CONFIG_H

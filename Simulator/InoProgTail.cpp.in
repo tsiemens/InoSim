@@ -1,0 +1,9 @@
+// END .ino file content
+
+void runIno() {
+   setup();
+
+   while (true) {
+      loop();
+   }
+}
