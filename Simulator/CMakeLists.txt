@@ -11,7 +11,7 @@ configure_file (
   "${PROJECT_BINARY_DIR}/SimulatorConfig.h"
   )
 
-set (CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-Wall -Werror")
+set (CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-Wall -Werror -g")
 
 # add the binary tree to the search path for include files
 # so that we will find SimulatorConfig.h
@@ -30,11 +30,14 @@ set (INO_PROG_FILE "Sample.ino" CACHE STRING "The .ino file to be compiled")
 
 include_directories ("${PROJECT_SOURCE_DIR}" "${PROJECT_SOURCE_DIR}/InoLib")
 add_subdirectory (InoLib)
-set (EXTRA_LIBS ${EXTRA_LIBS} InoLib)
+set (EXTRA_LIBS ${EXTRA_LIBS}
+   ncurses
+   InoLib
+   )
 
 add_custom_command (OUTPUT "${PROJECT_BINARY_DIR}/InoProg.cpp"
-   COMMAND cat InoProgHead.cpp.in ${INO_PROG_FILE} InoProgTail.cpp.in > "${PROJECT_BINARY_DIR}/InoProg.cpp"
-   DEPENDS InoProgHead.cpp.in ${INO_PROG_FILE} InoProgTail.cpp.in
+   COMMAND cat InoProgHead.cpp.in ${INO_PROG_FILE} > "${PROJECT_BINARY_DIR}/InoProg.cpp"
+   DEPENDS InoProgHead.cpp.in ${INO_PROG_FILE}
    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
    )
 

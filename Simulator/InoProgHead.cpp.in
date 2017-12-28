@@ -1,4 +1,3 @@
-#include "InoProg.h"
 #include "SimulatorConfig.h"
 #include "Arduino.h"
 

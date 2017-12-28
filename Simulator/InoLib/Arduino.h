@@ -5,6 +5,10 @@
 // https://github.com/arduino/Arduino/blob/master/hardware/arduino/avr/cores/arduino/Arduino.h
 // These are provided without explicit import in the .ino file.
 
+extern unsigned long delayYieldIntervalMs;
+// Called every <delayYieldIntervalMs> milliseconds
+extern void (*delayYieldCallback)();
+
 void delay(unsigned long ms);
 
 long map(long val, long fromLow, long fromHigh, long toLow, long toHigh);
