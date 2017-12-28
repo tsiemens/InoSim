@@ -12,13 +12,16 @@ extern unsigned long delayYieldIntervalMs;
 extern void (*delayYieldCallback)();
 
 extern boost::circular_buffer<std::string> logBuff;
-
+extern uint64_t lastLogN;
 extern std::ostringstream _logOs;
+
+uint64_t nowMs();
 
 #define NLOG(__streamExp) \
   _logOs.clear(); \
   _logOs.str(""); \
   _logOs << __streamExp; \
-  logBuff.push_back(_logOs.str())
+  logBuff.push_back(_logOs.str()); \
+  lastLogN++ \
 
 #endif // INO_LIB_UTILS_H

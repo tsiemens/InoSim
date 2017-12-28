@@ -1,5 +1,4 @@
 // A simple program that computes the square root of a number
-#include <chrono>
 #include <cstring>
 #include <execinfo.h>
 #include <inttypes.h>
@@ -16,10 +15,18 @@
 #include "SimulatorConfig.h"
 #include "SysState.h"
 
+// Windows
+WINDOW *stateWin;
+WINDOW *logWin;
+WINDOW *helpWin;
+
 bool cursesIsStarted = false;
 
 void cleanup() {
   if (cursesIsStarted) {
+    delwin(stateWin);
+    delwin(logWin);
+    delwin(helpWin);
     endwin();
   }
 }
@@ -45,27 +52,20 @@ void sigHandler(int sig) {
 
 void initNcurses();
 
-int topLine = 0;
-int starty = 0;
 bool stateIsDirty = true;
 
-void draw() {
-  int top = starty;
-  if (top < 0) top = 0;
-  if (top >= (int)sysStateMap.size()) top = sysStateMap.size() - 1;
-  clear();
+void drawState() {
+  int h, w;
+  getmaxyx(stateWin, h, w);
+
+  wclear(stateWin);
+  wmove(stateWin, 0, 0);
   int i = 0;
-  int lines = 5;
-  for (auto it = sysStateMap.begin(); it != sysStateMap.end() && i < lines + top;
-       it++, i++) {
-    if (i < top) {
-      continue;
-    }
-    printw("%s: %s\n", it->first.c_str(), it->second.c_str());
+  for (auto it = sysStateMap.begin(); it != sysStateMap.end() && i < h; it++, i++) {
+    wprintw(stateWin, "%s: %s\n", it->first.c_str(), it->second.c_str());
   }
 
-  mvprintw(LINES - 1, 0, "Press q to exit");
-  refresh();
+  wrefresh(stateWin);
 }
 
 void onStateChanged(const std::string & state) {
@@ -75,7 +75,7 @@ void onStateChanged(const std::string & state) {
 WINDOW *create_newwin(int height, int width, int starty, int startx);
 void destroy_win(WINDOW *win);
 
-void drawLogWin(WINDOW *logWin) {
+void drawLogWin() {
   int x, y, maxX, maxY;
   getmaxyx(logWin, maxY, maxX);
   int firstEntry = std::max((int)logBuff.size() - 3, 0);
@@ -97,10 +97,16 @@ void drawLogWin(WINDOW *logWin) {
   wrefresh(logWin);
 }
 
+WINDOW *_newwin(int height, int width, int starty, int startx) {
+  WINDOW *win = newwin(height, width, starty, startx);
+  // ncurses getch timeout in ms
+  wtimeout(win, 10);
+  return win;
+}
+
 void initNcurses() {
   onSysStateChanged = onStateChanged;
   // WINDOW *my_win;
-  int ch;
 
   // Start curses mode
   initscr();
@@ -110,30 +116,51 @@ void initNcurses() {
   cbreak();
   keypad(stdscr, TRUE);    /* I need the arrow keys   */
 
-  int height = (LINES / 3);
-  int width = COLS;
-
-  int starty = LINES - height;
-  int startx = 0;
-  printw("Press c to continue");
-  refresh();
-  // my_win = create_newwin(height, width, starty, startx);
   // ncurses getch timeout in ms
   timeout(10);
 
-  // WINDOW *thewin = create_newwin(height, width, starty, startx);
-  WINDOW *thewin = newwin(height, width, starty, startx);
-  drawLogWin(thewin);
+  /* State
+   * ---------------
+   * Logs
+   * Help
+   */
+
+  int width, starty, startx;
+  starty = 0;
+  startx = 0;
+  width = COLS;
+
+  int logsH = LINES / 3;
+  int helpH = 1;
+  int stateH = LINES - logsH - helpH;
+
+  stateWin = _newwin(stateH, width, starty, startx);
+
+  starty += stateH;
+  logWin = _newwin(logsH, width, starty, startx);
+
+  starty += logsH;
+  helpWin = _newwin(helpH, width, starty, startx);
+  wprintw(helpWin, "q:quit  w/s:scroll logs");
+  wrefresh(helpWin);
+
+  // printw("Press c to continue");
+  // refresh();
+  // my_win = create_newwin(height, width, starty, startx);
+
+  // WINDOW *logWin = create_newwin(height, width, starty, startx);
 
   for (int i = 0; i < 22; i++) {
     char thebuf[20];
     sprintf(thebuf, "Foo%d", i);
     logBuff.push_back(std::string(thebuf));
   }
-  NLOG( "FOO: " << __func__ << " " << 1 );
-  drawLogWin(thewin);
+  NLOG(__func__);
+  drawLogWin();
 
   // Test code below
+  /*
+  int ch;
 	while((ch = getch()) != 'c')
 	{	switch(ch)
 		{	case KEY_LEFT:
@@ -165,8 +192,9 @@ void initNcurses() {
         break;
 		}
 	}
+  */
 
-  destroy_win(thewin);
+  // destroy_win(logWin);
 }
 
 WINDOW *create_newwin(int height, int width, int starty, int startx) {
@@ -202,27 +230,32 @@ void destroy_win(WINDOW *win) {
   delwin(win);
 }
 
-uint64_t now() {
-  using namespace std::chrono;
-  return (uint64_t)duration_cast< milliseconds >(
-      system_clock::now().time_since_epoch()
-    ).count();
-}
-
 // We should aim to draw this often
 #define DRAW_MIN_MS (1000 / 5)
 
 uint64_t lastDrawTime = 0;
 
+uint64_t lastDrawnLogN = 0;
+
 void tryDraw() {
-  if (stateIsDirty && now() - lastDrawTime > DRAW_MIN_MS) {
-    lastDrawTime = now();
-    draw();
+  if (stateIsDirty) {
+    drawState();
+  }
+  if (lastDrawnLogN != lastLogN) {
+    lastDrawnLogN = lastLogN;
+    drawLogWin();
+  }
+}
+
+void drawIfTime() {
+  if (nowMs() - lastDrawTime > DRAW_MIN_MS) {
+    lastDrawTime = nowMs();
+    tryDraw();
   }
 }
 
 void tryHandleKey() {
-	int ch = getch();
+  int ch = wgetch(helpWin);
   switch (ch) {
    case 'q':
     doExit(0);
@@ -230,19 +263,21 @@ void tryHandleKey() {
 }
 
 void runIno() {
-  tryDraw();
+  drawIfTime();
 
   setup();
 
+  int i = 0;
   while (true) {
+    NLOG(__func__ << ": loop " << ++i);
     loop();
-    tryDraw();
+    drawIfTime();
     tryHandleKey();
   }
 }
 
 void inoDelayYield() {
-  tryDraw();
+  drawIfTime();
   tryHandleKey();
 }
 
