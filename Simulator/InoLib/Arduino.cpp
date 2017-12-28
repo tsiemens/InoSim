@@ -4,9 +4,7 @@
 #include <stdint.h>
 #include <time.h>
 
-unsigned long delayYieldIntervalMs = UINT64_MAX;
-// Called every <delayYieldIntervalMs> milliseconds
-void (*delayYieldCallback)() = NULL;
+#include "InoLibUtils.h"
 
 #define M_TO_N 1000000
 

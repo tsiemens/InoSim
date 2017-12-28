@@ -1,24 +1,22 @@
 // A simple program that computes the square root of a number
 #include <chrono>
+#include <cstring>
+#include <execinfo.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <execinfo.h>
 #include <signal.h>
-#include <unistd.h>
-#include <cstring>
-#include <ncurses.h>
 #include <string>
-#include <map>
-#include "SimulatorConfig.h"
+#include <unistd.h>
+
+#include <ncurses.h>
+
 #include "Arduino.h"
+#include "InoLibUtils.h"
+#include "SimulatorConfig.h"
 #include "SysState.h"
 
 bool cursesIsStarted = false;
-
-bool stringIsBefore(std::string a, std::string b) {
-  return a.compare(b) < 0;
-}
 
 void cleanup() {
   if (cursesIsStarted) {
@@ -56,7 +54,6 @@ void draw() {
   if (top < 0) top = 0;
   if (top >= (int)sysStateMap.size()) top = sysStateMap.size() - 1;
   clear();
-  refresh();
   int i = 0;
   int lines = 5;
   for (auto it = sysStateMap.begin(); it != sysStateMap.end() && i < lines + top;
@@ -78,32 +75,66 @@ void onStateChanged(const std::string & state) {
 WINDOW *create_newwin(int height, int width, int starty, int startx);
 void destroy_win(WINDOW *win);
 
+void drawLogWin(WINDOW *logWin) {
+  int x, y, maxX, maxY;
+  getmaxyx(logWin, maxY, maxX);
+  int firstEntry = std::max((int)logBuff.size() - 3, 0);
+
+  wclear(logWin);
+  // Draw a separator line along the top of the window
+  whline(logWin, 0, COLS);
+  wmove(logWin, 1, 0);
+  for (auto it = logBuff.begin() + firstEntry; it != logBuff.end(); it++) {
+    wprintw(logWin, (*it).c_str());
+    wprintw(logWin, "\n");
+    getyx(logWin, y, x);
+    // y caps out at maxY - 1, even though semantically, this doesn't sound right.
+    if (y + 1 >= maxY && x != 0) {
+      // nothing more can be printed
+      break;
+    }
+  }
+  wrefresh(logWin);
+}
+
 void initNcurses() {
   onSysStateChanged = onStateChanged;
-	// WINDOW *my_win;
-	int startx, width;
-	int ch;
+  // WINDOW *my_win;
+  int ch;
 
-	initscr();			/* Start curses mode 		*/
+  // Start curses mode
+  initscr();
   cursesIsStarted = true;
   noecho();
-	cbreak();			/* Line buffering disabled, Pass on
-					 * everty thing to me 		*/
-	keypad(stdscr, TRUE);		/* I need the arrow keys 	*/
+  // Disable line buffering. Pass all keypresses to getch
+  cbreak();
+  keypad(stdscr, TRUE);    /* I need the arrow keys   */
 
-	width = 10;
-	// starty = (LINES - height) / 2;	[> Calculating for a center placement <]
-  starty = 0;
-	startx = (COLS - width) / 2;	/* of the window		*/
-	printw("Press q to exit");
-	refresh();
-	// my_win = create_newwin(height, width, starty, startx);
+  int height = (LINES / 3);
+  int width = COLS;
+
+  int starty = LINES - height;
+  int startx = 0;
+  printw("Press c to continue");
+  refresh();
+  // my_win = create_newwin(height, width, starty, startx);
   // ncurses getch timeout in ms
   timeout(10);
 
-  return;
+  // WINDOW *thewin = create_newwin(height, width, starty, startx);
+  WINDOW *thewin = newwin(height, width, starty, startx);
+  drawLogWin(thewin);
+
+  for (int i = 0; i < 22; i++) {
+    char thebuf[20];
+    sprintf(thebuf, "Foo%d", i);
+    logBuff.push_back(std::string(thebuf));
+  }
+  NLOG( "FOO: " << __func__ << " " << 1 );
+  drawLogWin(thewin);
+
   // Test code below
-	while((ch = getch()) != 'q')
+	while((ch = getch()) != 'c')
 	{	switch(ch)
 		{	case KEY_LEFT:
         startx--;
@@ -134,6 +165,8 @@ void initNcurses() {
         break;
 		}
 	}
+
+  destroy_win(thewin);
 }
 
 WINDOW *create_newwin(int height, int width, int starty, int startx) {
