@@ -1,6 +1,8 @@
 #include "Servo.h"
+
 #include <assert.h>
-#include <iostream>
+#include <sstream>
+
 #include "Arduino.h"
 #include "SysState.h"
 
@@ -22,8 +24,6 @@ Servo::attach(int pin) {
 
 uint8_t
 Servo::attach(int pin, int min, int max) {
-  // std::cout << "Servo::attach pin: " << pin << ", min: " << min << ", max: " << max
-    // << std::endl;
   assert(!attached());
   if (nextServo >= MAX_SERVOS) {
     // Can't get another servo
@@ -40,7 +40,6 @@ Servo::attach(int pin, int min, int max) {
 
 void
 Servo::detach() {
-  // std::cout << "Servo::detach" << std::endl;
   if (!attached()) {
     return;
   }
@@ -50,8 +49,7 @@ Servo::detach() {
 
 void
 Servo::write(int value) {
-  // std::cout << "Servo::write " << value << std::endl;
-  setSysState("servo1", value);
+  setSysState(name(), value);
   if(value < MIN_PULSE_WIDTH) {
     // treat values less than 544 as angles in degrees
     // (valid values in microseconds are handled as microseconds)
@@ -64,23 +62,26 @@ Servo::write(int value) {
 
 void
 Servo::writeMicroseconds(int value) {
-  // std::cout << "Servo::writeMicroseconds " << value << std::endl;
   servoPulseWidths[servoIndex] = value;
 }
 
 int
 Servo::read() {
-  // std::cout << "Servo::read" << std::endl;
   return  map(readMicroseconds() + 1, min, max, 0, 180);
 }
 
 int
 Servo::readMicroseconds() {
-  // std::cout << "Servo::readMicroseconds" << std::endl;
   return servoPulseWidths[servoIndex];
 }
 
 bool
 Servo::attached() {
   return servoIndex != INVALID_SERVO;
+}
+
+std::string Servo::name() {
+  std::ostringstream os;
+  os << "servo" << (int)servos[servoIndex].Pin.nbr;
+  return os.str();
 }

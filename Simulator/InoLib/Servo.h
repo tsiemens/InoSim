@@ -6,6 +6,7 @@
 // https://github.com/arduino-libraries/Servo/blob/master/src/Servo.h
 
 #include <inttypes.h>
+#include <string>
 
 // Set arbitrarily for now
 #define _Nbr_16timers 12
@@ -52,6 +53,8 @@ class Servo {
   // return true if this servo is attached, otherwise false
   bool attached();
  private:
+  std::string name();
+
   uint8_t servoIndex; // index into the channel data for this servo
   int16_t min;        // minimum pulse width
   int16_t max;        // maximum pulse width
