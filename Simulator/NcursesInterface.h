@@ -40,6 +40,13 @@ class LogWin : public WindowDrawer {
  public:
   LogWin(int height, int startY);
   virtual void draw();
+  // Can't use name "scroll" since it is a ncurses macro
+  void scrol(int nlines);
+
+ private:
+  int firstEntryToShow();
+
+  int manualTopEntry;
 };
 
 class HelpWin : public WindowDrawer {
@@ -68,9 +75,9 @@ class NcursesCtrlr {
   uint64_t lastDrawTime = 0;
   uint64_t lastDrawnLogN = 0;
 
-  WindowDrawer *stateWin;
-  WindowDrawer *logWin;
-  WindowDrawer *helpWin;
+  StateWin *stateWin;
+  LogWin *logWin;
+  HelpWin *helpWin;
 };
 
 #endif // NCURSES_INTERFACE_H

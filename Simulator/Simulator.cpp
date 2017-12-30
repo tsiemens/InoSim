@@ -65,6 +65,7 @@ void inoDelayYield() {
 
 void initNcurses() {
   cursesCtrlr = new NcursesCtrlr();
+  cursesCtrlr->onExitHandler = handleCursesExit;
   cursesCtrlr->start();
 
   for (int i = 0; i < 22; i++) {

@@ -51,17 +51,17 @@ void StateWin::draw() {
 
 LogWin::LogWin(int height, int startY) {
   win_ = newWindow(height, COLS, startY, 0);
+  manualTopEntry = -1;
 }
 
 void LogWin::draw() {
   WinDimens d = getDimens();
-  int firstEntry = std::max((int)logBuff.size() - 3, 0);
 
   wclear(win_);
   // Draw a separator line along the top of the window
   whline(win_, 0, COLS);
   wmove(win_, 1, 0);
-  for (auto it = logBuff.begin() + firstEntry; it != logBuff.end(); it++) {
+  for (auto it = logBuff.begin() + firstEntryToShow(); it != logBuff.end(); it++) {
     wprintw(win_, (*it).c_str());
     wprintw(win_, "\n");
     Coords c = getCursor();
@@ -72,6 +72,28 @@ void LogWin::draw() {
     }
   }
   wrefresh(win_);
+}
+
+void LogWin::scrol(int nlines) {
+  int top = firstEntryToShow();
+  top += nlines;
+
+  if (logBuff.size() == 0 || top < 0) {
+    top = 0;
+  } else if (top >= (int)logBuff.size()) {
+    top = logBuff.size() - 1;
+  }
+
+  manualTopEntry = top;
+
+}
+
+int LogWin::firstEntryToShow() {
+  if (manualTopEntry >= 0) {
+    return manualTopEntry;
+  } else {
+    return std::max((int)logBuff.size() - 3, 0);
+  }
 }
 
 HelpWin::HelpWin(int startY) {
@@ -119,6 +141,7 @@ void NcursesCtrlr::start() {
 
   starty += logsH;
   helpWin = new HelpWin(starty);
+  helpWin->draw();
 }
 
 void NcursesCtrlr::stop() {
@@ -151,6 +174,12 @@ void NcursesCtrlr::maybeHandleKey() {
     // TODO
     break;
    case 'w':
+    logWin->scrol(-1);
+    lastDrawnLogN = 0;
+    break;
+   case 's':
+    logWin->scrol(1);
+    lastDrawnLogN = 0;
     break;
   }
 }
