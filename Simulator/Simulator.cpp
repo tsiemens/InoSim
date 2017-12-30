@@ -12,21 +12,25 @@
 
 #include "Arduino.h"
 #include "InoLibUtils.h"
+#include "NcursesInterface.h"
 #include "SimulatorConfig.h"
 #include "SysState.h"
 
 // Windows
-WINDOW *stateWin;
-WINDOW *logWin;
-WINDOW *helpWin;
+WindowDrawer *stateWin;
+WindowDrawer *logWin;
+WindowDrawer *helpWin;
 
 bool cursesIsStarted = false;
 
 void cleanup() {
   if (cursesIsStarted) {
-    delwin(stateWin);
-    delwin(logWin);
-    delwin(helpWin);
+    delete stateWin;
+    stateWin = NULL;
+    delete logWin;
+    logWin = NULL;
+    delete helpWin;
+    helpWin = NULL;
     endwin();
   }
 }
@@ -54,48 +58,12 @@ void initNcurses();
 
 bool stateIsDirty = true;
 
-void drawState() {
-  int h, w;
-  getmaxyx(stateWin, h, w);
-
-  wclear(stateWin);
-  wmove(stateWin, 0, 0);
-  int i = 0;
-  for (auto it = sysStateMap.begin(); it != sysStateMap.end() && i < h; it++, i++) {
-    wprintw(stateWin, "%s: %s\n", it->first.c_str(), it->second.c_str());
-  }
-
-  wrefresh(stateWin);
-}
-
 void onStateChanged(const std::string & state) {
   stateIsDirty = true;
 }
 
 WINDOW *create_newwin(int height, int width, int starty, int startx);
 void destroy_win(WINDOW *win);
-
-void drawLogWin() {
-  int x, y, maxX, maxY;
-  getmaxyx(logWin, maxY, maxX);
-  int firstEntry = std::max((int)logBuff.size() - 3, 0);
-
-  wclear(logWin);
-  // Draw a separator line along the top of the window
-  whline(logWin, 0, COLS);
-  wmove(logWin, 1, 0);
-  for (auto it = logBuff.begin() + firstEntry; it != logBuff.end(); it++) {
-    wprintw(logWin, (*it).c_str());
-    wprintw(logWin, "\n");
-    getyx(logWin, y, x);
-    // y caps out at maxY - 1, even though semantically, this doesn't sound right.
-    if (y + 1 >= maxY && x != 0) {
-      // nothing more can be printed
-      break;
-    }
-  }
-  wrefresh(logWin);
-}
 
 WINDOW *_newwin(int height, int width, int starty, int startx) {
   WINDOW *win = newwin(height, width, starty, startx);
@@ -106,7 +74,6 @@ WINDOW *_newwin(int height, int width, int starty, int startx) {
 
 void initNcurses() {
   onSysStateChanged = onStateChanged;
-  // WINDOW *my_win;
 
   // Start curses mode
   initscr();
@@ -125,30 +92,19 @@ void initNcurses() {
    * Help
    */
 
-  int width, starty, startx;
-  starty = 0;
-  startx = 0;
-  width = COLS;
+  int starty = 0;
 
   int logsH = LINES / 3;
   int helpH = 1;
   int stateH = LINES - logsH - helpH;
 
-  stateWin = _newwin(stateH, width, starty, startx);
+  stateWin = new StateWin(stateH, starty);
 
   starty += stateH;
-  logWin = _newwin(logsH, width, starty, startx);
+  logWin = new LogWin(logsH, starty);
 
   starty += logsH;
-  helpWin = _newwin(helpH, width, starty, startx);
-  wprintw(helpWin, "q:quit  w/s:scroll logs");
-  wrefresh(helpWin);
-
-  // printw("Press c to continue");
-  // refresh();
-  // my_win = create_newwin(height, width, starty, startx);
-
-  // WINDOW *logWin = create_newwin(height, width, starty, startx);
+  helpWin = new HelpWin(starty);
 
   for (int i = 0; i < 22; i++) {
     char thebuf[20];
@@ -156,7 +112,6 @@ void initNcurses() {
     logBuff.push_back(std::string(thebuf));
   }
   NLOG(__func__);
-  drawLogWin();
 
   // Test code below
   /*
@@ -193,8 +148,6 @@ void initNcurses() {
 		}
 	}
   */
-
-  // destroy_win(logWin);
 }
 
 WINDOW *create_newwin(int height, int width, int starty, int startx) {
@@ -239,11 +192,11 @@ uint64_t lastDrawnLogN = 0;
 
 void tryDraw() {
   if (stateIsDirty) {
-    drawState();
+    stateWin->draw();
   }
   if (lastDrawnLogN != lastLogN) {
     lastDrawnLogN = lastLogN;
-    drawLogWin();
+    logWin->draw();
   }
 }
 
@@ -255,7 +208,7 @@ void drawIfTime() {
 }
 
 void tryHandleKey() {
-  int ch = wgetch(helpWin);
+  int ch = helpWin->getCh();
   switch (ch) {
    case 'q':
     doExit(0);

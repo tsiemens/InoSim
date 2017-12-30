@@ -45,6 +45,7 @@ add_custom_command (OUTPUT "${PROJECT_BINARY_DIR}/InoProg.cpp"
 add_executable(Simulator
    Simulator.cpp
    InoProg.cpp
+   NcursesInterface.cpp
    )
 target_link_libraries (Simulator  ${EXTRA_LIBS})
 
