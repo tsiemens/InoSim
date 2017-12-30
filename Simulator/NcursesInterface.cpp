@@ -83,3 +83,96 @@ void HelpWin::draw() {
   wprintw(win_, "q:quit  w/s:scroll logs");
   wrefresh(win_);
 }
+
+// Controller
+NcursesCtrlr::NcursesCtrlr() {
+  sysStateIsDirty = true;
+}
+
+void NcursesCtrlr::start() {
+  assert(!isStarted());
+
+  initscr();
+  noecho();
+  // Disable line buffering. Pass all keypresses to getch
+  cbreak();
+  keypad(stdscr, TRUE);    /* I need the arrow keys   */
+
+  // ncurses getch timeout in ms
+  timeout(10);
+
+  /* State
+   * ---------------
+   * Logs
+   * Help
+   */
+
+  int starty = 0;
+  int logsH = LINES / 3;
+  int helpH = 1;
+  int stateH = LINES - logsH - helpH;
+
+  stateWin = new StateWin(stateH, starty);
+
+  starty += stateH;
+  logWin = new LogWin(logsH, starty);
+
+  starty += logsH;
+  helpWin = new HelpWin(starty);
+}
+
+void NcursesCtrlr::stop() {
+  if (isStarted()) {
+    delete stateWin;
+    stateWin = NULL;
+    delete logWin;
+    logWin = NULL;
+    delete helpWin;
+    helpWin = NULL;
+    endwin();
+  }
+}
+
+bool NcursesCtrlr::isStarted() {
+  return helpWin != NULL;
+}
+
+void NcursesCtrlr::maybeHandleKey() {
+  int ch = helpWin->getCh();
+  switch (ch) {
+   case 'q':
+    if (onExitHandler) {
+      onExitHandler();
+    }
+   case KEY_LEFT:
+   case KEY_RIGHT:
+   case KEY_UP:
+   case KEY_DOWN:
+    // TODO
+    break;
+   case 'w':
+    break;
+  }
+}
+
+void NcursesCtrlr::drawStaleWins() {
+  if (sysStateIsDirty) {
+    stateWin->draw();
+  }
+  if (lastDrawnLogN != lastLogN) {
+    lastDrawnLogN = lastLogN;
+    logWin->draw();
+  }
+}
+
+void NcursesCtrlr::drawIfIsTime() {
+  if (nowMs() - lastDrawTime > DRAW_MIN_MS) {
+    lastDrawTime = nowMs();
+    drawStaleWins();
+  }
+}
+
+void NcursesCtrlr::doPeriodicActions() {
+  drawIfIsTime();
+  maybeHandleKey();
+}

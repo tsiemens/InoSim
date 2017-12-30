@@ -3,6 +3,9 @@
 
 #include <ncurses.h>
 
+// We should aim to draw this often
+#define DRAW_MIN_MS (1000 / 5)
+
 struct Coords {
   int x;
   int y;
@@ -43,6 +46,31 @@ class HelpWin : public WindowDrawer {
  public:
   HelpWin(int startY);
   virtual void draw();
+};
+
+class NcursesCtrlr {
+ public:
+  NcursesCtrlr();
+  void start();
+  void stop();
+  bool isStarted();
+
+  void doPeriodicActions();
+  void maybeHandleKey();
+  void drawIfIsTime();
+
+  void (*onExitHandler)() = NULL;
+  bool sysStateIsDirty;
+
+ private:
+  void drawStaleWins();
+
+  uint64_t lastDrawTime = 0;
+  uint64_t lastDrawnLogN = 0;
+
+  WindowDrawer *stateWin;
+  WindowDrawer *logWin;
+  WindowDrawer *helpWin;
 };
 
 #endif // NCURSES_INTERFACE_H
